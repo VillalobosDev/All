@@ -1,8 +1,13 @@
+
 import pymysql
 from tkinter import messagebox
 import csv
+from customtkinter import CTkEntry
+from tkinter import ttk
 
-placeholderArray = [None] * 8
+def some_function(my_tree, placeholderArray):
+    # Now placeholderArray is defined here and can be used.
+    pass
 
 # Function to connect to the database
 def connection():
@@ -16,27 +21,29 @@ def connection():
 def read():
     with connection() as conn:  # Use context manager to handle connection
         cursor = conn.cursor()
-        sql = """SELECT `cedula`, `contribuyente`, `nombreinmueble`, `rif`, `sector`, 
-                 `uso`, `codcatastral`, `fechaliquidacion` FROM reg ORDER BY `fechaliquidacion` DESC"""
+        sql = """SELECT cedula, contribuyente, nombreinmueble, rif, sector, 
+                 uso, codcatastral, fechaliquidacion FROM reg ORDER BY fechaliquidacion DESC"""
         cursor.execute(sql)
         results = cursor.fetchall()
     return results
 
-def refreshTable(my_tree):
+def refreshTable(my_tree, results=None):
     # Clear existing items in the tree
     for data in my_tree.get_children():
         my_tree.delete(data)
 
-    # Insert new items
-    for array in read():
-        if not my_tree.exists(array):
-            my_tree.insert(parent='', index='end', iid=array, text="", values=array, tag="orow")
+    # If results are provided, insert them into the tree
+    if results:
+        for array in results:
+            my_tree.insert(parent='', index='end', iid=array[0], text="", values=array, tag="orow")
 
     my_tree.tag_configure('orow', background="#EEEEEE")
 
 def setph(word, num, placeholderArray):
     if num < len(placeholderArray):
-        placeholderArray[num].set(word)
+        entry = placeholderArray[num]
+        entry.delete(0, 'end')  # Clear the current text
+        entry.insert(0, word)
 
 def save(cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry, sectorEntry, usoEntry, codcatastralEntry, fechaliquidacionEntry, placeholderArray, my_tree):
     cedula = cedulaEntry.get().strip()
@@ -55,8 +62,8 @@ def save(cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry, sectorE
     try:
         with connection() as conn:
             cursor = conn.cursor()
-            sql = """INSERT INTO reg (`cedula`, `contribuyente`, `nombreinmueble`, `rif`, `sector`, 
-                     `uso`, `codcatastral`, `fechaliquidacion`) 
+            sql = """INSERT INTO reg (cedula, contribuyente, nombreinmueble, rif, sector, 
+                     uso, codcatastral, fechaliquidacion) 
                      VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
             cursor.execute(sql, (cedula, contribuyente, nombreinmueble, rif, sector, uso, codcatastral, fechaliquidacion))
             conn.commit()
@@ -95,10 +102,10 @@ def update(my_tree, cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEnt
         with connection() as conn:
             cursor = conn.cursor()
             sql = """UPDATE reg 
-                     SET `cedula` = %s, `contribuyente` = %s, `nombreinmueble` = %s, 
-                         `rif` = %s, `sector` = %s, `uso` = %s, `codcatastral` = %s, 
-                         `fechaliquidacion` = %s 
-                     WHERE `cedula` = %s"""
+                     SET cedula = %s, contribuyente = %s, nombreinmueble = %s, 
+                         rif = %s, sector = %s, uso = %s, codcatastral = %s, 
+                         fechaliquidacion = %s 
+                     WHERE cedula = %s"""
 
             cursor.execute(sql, (cedula, contribuyente, nombreinmueble, rif, sector, uso, codcatastral, fechaliquidacion, selectedItemId))
             conn.commit()
@@ -125,7 +132,7 @@ def delete(my_tree):
     try:
         with connection() as conn:
             cursor = conn.cursor()
-            sql = "DELETE FROM reg WHERE `cedula` = %s"
+            sql = "DELETE FROM reg WHERE cedula = %s"
             cursor.execute(sql, (cedula,))
             conn.commit()
             messagebox.showinfo("", "Se elimino el registro correctamente")
@@ -161,32 +168,77 @@ def find(my_tree, cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry
         with connection() as conn:
             cursor = conn.cursor()
 
+            # Retrieve values from entry fields
+            cedula = cedulaEntry.get().strip()
+            contribuyente = contribuyenteEntry.get().strip()
+            nombreinmueble = nombreinmuebleEntry.get().strip()
+            rif = rifEntry.get().strip()
+            sector = sectorEntry.get().strip()
+            uso = usoEntry.get().strip()
+            codcatastral = codcatastralEntry.get().strip()
+            fechaliquidacion = fechaliquidacionEntry.get().strip()
+
+            # If no entry fields are filled, get all records ordered by fechaliquidacion
+            if not any([cedula, contribuyente, nombreinmueble, rif, sector, uso, codcatastral, fechaliquidacion]):
+                sql = """SELECT cedula, contribuyente, nombreinmueble, rif, sector, uso, codcatastral, fechaliquidacion 
+                         FROM reg ORDER BY fechaliquidacion DESC"""
+                cursor.execute(sql)
+                results = cursor.fetchall()
+
+                # Clear the treeview and insert new items
+                refreshTable(my_tree, results)
+                return
+
+            # If a cedula is present in the placeholder, construct the query for that cedula
+            if cedula:
+                sql = """SELECT cedula, contribuyente, nombreinmueble, rif, sector, uso, codcatastral, fechaliquidacion 
+                         FROM reg WHERE cedula = %s"""
+                cursor.execute(sql, (cedula,))
+                results = cursor.fetchall()
+                
+                # Clear the treeview and insert new items
+                refreshTable(my_tree, results)
+                if not results:  # If no results were found
+                    messagebox.showwarning("", "No se encontraron registros para la cédula proporcionada.")
+                return
+            
+            # If specific fields are filled, construct the query
             fields = {
-                'cedula': cedulaEntry.get().strip(),
-                'contribuyente': contribuyenteEntry.get().strip(),
-                'nombreinmueble': nombreinmuebleEntry.get().strip(),
-                'rif': rifEntry.get().strip(),
-                'sector': sectorEntry.get().strip(),
-                'uso': usoEntry.get().strip(),
-                'codcatastral': codcatastralEntry.get().strip(),
-                'fechaliquidacion': fechaliquidacionEntry.get().strip()
+                'cedula': cedula,
+                'contribuyente': contribuyente,
+                'nombreinmueble': nombreinmueble,
+                'rif': rif,
+                'sector': sector,
+                'uso': uso,
+                'codcatastral': codcatastral,
+                'fechaliquidacion': fechaliquidacion
             }
 
-            for field, value in fields.items():
-                if value:
-                    sql = f"SELECT `cedula`, `contribuyente`, `nombreinmueble`, `rif`, `sector`, `uso`, `codcatastral`, `fechaliquidacion` FROM reg WHERE `{field}` LIKE %s"
-                    cursor.execute(sql, (f'%{value}%',))
-                    result = cursor.fetchall()
+            query_conditions = []
+            query_values = []
 
-                    if result:
-                        for num in range(len(result[0])):
-                            setph(result[0][num], num, placeholderArray)
-                        return
-                    else:
-                        messagebox.showwarning("", "No se encontro el registro")
-                        return
+            for field, value in fields.items():
+                if value:  # Only include non-empty fields in the query
+                    query_conditions.append(f"{field} LIKE %s")
+                    query_values.append(f'%{value}%')
+
+            if query_conditions:  # Only run this if there are conditions
+                query = "SELECT cedula, contribuyente, nombreinmueble, rif, sector, uso, codcatastral, fechaliquidacion FROM reg WHERE " + " AND ".join(query_conditions)
+                cursor.execute(query, query_values)
+                results = cursor.fetchall()
+                
+                # Clear the treeview and insert new items
+                refreshTable(my_tree, results)
+
+                if not results:  # If no results were found
+                    messagebox.showwarning("", "No se encontraron registros.")
+            else:
+                # If all fields are empty or no conditions matched
+                messagebox.showwarning("", "Por favor proporciona al menos un criterio de búsqueda.")
+
     except Exception as e:
         messagebox.showwarning("", f"An error occurred: {e}")
+        print(e)
 
 def clear(placeholderArray):
     for num in range(len(placeholderArray)):

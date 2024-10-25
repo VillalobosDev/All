@@ -40,22 +40,6 @@ frame.pack(fill="x", padx=10, pady=10)
 button_poppins = ("poppins", 16, "bold") 
 placeholder_poppins = ("poppins", 12, "normal") 
 
-
-# Define buttons with text and appropriate commands
-buttons = [
-    ("Agregar", lambda: save(cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry, sectorEntry, usoEntry, codcatastralEntry, fechaliquidacionEntry, placeholderArray, my_tree)),
-    ("Actualizar", lambda: update(my_tree, cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry, sectorEntry, usoEntry, codcatastralEntry, fechaliquidacionEntry, placeholderArray)),
-    ("Eliminar", lambda: delete(my_tree)),
-    ("Seleccionar", lambda: select(my_tree, placeholderArray)),
-    ("Buscar", lambda: find(my_tree, cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry, sectorEntry, usoEntry, codcatastralEntry, fechaliquidacionEntry)),
-    ("Limpiar", lambda: clear(placeholderArray)),
-    ("Exportar a Excel", lambda: exportExcel())
-]
-
-# Create the buttons in a loop
-for i, (text, command) in enumerate(buttons):
-    ctk.CTkButton(frame, text=text, command=command, font=button_poppins).grid(row=0, column=i, padx=5, pady=5, sticky="w")
-
 input_frame = ctk.CTkFrame(window)
 input_frame.pack(fill="x", padx=10, pady=10)
 
@@ -84,9 +68,28 @@ codcatastralEntry.grid(row=7, column=0, padx=5, pady=5, sticky="ew")
 fechaliquidacionEntry = ctk.CTkEntry(input_frame, placeholder_text="Fecha Liquidacion", font=placeholder_poppins)
 fechaliquidacionEntry.grid(row=8, column=0, padx=5, pady=5, sticky="ew")
 
+placeholderArray = [cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry, 
+                    sectorEntry, usoEntry, codcatastralEntry, fechaliquidacionEntry]
+
+
 # Create a frame to hold the Treeview
 frame_tree = ctk.CTkFrame(window, fg_color='white', width=580, height=360)
 frame_tree.pack(pady=10, padx=10, expand=True, fill="both")  # Adjusted padding
+
+# Define buttons with text and appropriate commands
+buttons = [
+    ("Agregar", lambda: save(cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry, sectorEntry, usoEntry, codcatastralEntry, fechaliquidacionEntry, placeholderArray, my_tree)),
+    ("Actualizar", lambda: update(my_tree, cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry, sectorEntry, usoEntry, codcatastralEntry, fechaliquidacionEntry, placeholderArray)),
+    ("Eliminar", lambda: delete(my_tree)),
+    ("Seleccionar", lambda: select(my_tree, placeholderArray)),
+    ("Buscar", lambda: find(my_tree, cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry, sectorEntry, usoEntry, codcatastralEntry, fechaliquidacionEntry)),
+    ("Limpiar", lambda: clear(placeholderArray)),
+    ("Exportar a Excel", lambda: exportExcel())
+]
+
+# Create the buttons in a loop
+for i, (text, command) in enumerate(buttons):
+    ctk.CTkButton(frame, text=text, command=command, font=button_poppins).grid(row=0, column=i, padx=5, pady=5, sticky="w")
 
 # Create a style for the Treeview
 style = ttk.Style()
@@ -106,7 +109,9 @@ for col in my_tree['columns']:
     my_tree.heading(col, text=col.capitalize(), anchor='center')  # Ensure anchor alignment
     my_tree.column(col, anchor='center')
 
-my_tree.bind('<ButtonRelease-1>', lambda event: select())  # Bind selection event
+my_tree.bind('<ButtonRelease-1>', lambda event: select(my_tree, placeholderArray))  # Bind selection event
+
+some_function(my_tree, placeholderArray)
 
 # Draw a rounded rectangle on the frame_tree
 canvas = ctk.CTkCanvas(frame_tree, width=0, height=0, highlightthickness=0, bg='white')
@@ -117,3 +122,5 @@ create_rounded_rectangle(canvas, 10, 10, 0, 0, r=5, fill='lightgray', outline='b
 refreshTable(my_tree)
 
 window.mainloop()
+
+
