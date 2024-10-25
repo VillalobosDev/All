@@ -35,7 +35,7 @@ def refreshTable(my_tree, results=None):
     # If results are provided, insert them into the tree
     if results:
         for array in results:
-            my_tree.insert(parent='', index='end', iid=array[0], text="", values=array, tag="orow")
+            my_tree.insert(parent='', index='end', text="", values=array, tag="orow")
 
     my_tree.tag_configure('orow', background="#EEEEEE")
 
@@ -184,57 +184,55 @@ def find(my_tree, cedulaEntry, contribuyenteEntry, nombreinmuebleEntry, rifEntry
                          FROM reg ORDER BY fechaliquidacion DESC"""
                 cursor.execute(sql)
                 results = cursor.fetchall()
-
-                # Clear the treeview and insert new items
                 refreshTable(my_tree, results)
                 return
 
-            # If a cedula is present in the placeholder, construct the query for that cedula
+            # If a cedula is present, retrieve all records associated with that cedula
             if cedula:
                 sql = """SELECT cedula, contribuyente, nombreinmueble, rif, sector, uso, codcatastral, fechaliquidacion 
-                         FROM reg WHERE cedula = %s"""
+                         FROM reg WHERE cedula = %s ORDER BY fechaliquidacion DESC"""
                 cursor.execute(sql, (cedula,))
                 results = cursor.fetchall()
-                
-                # Clear the treeview and insert new items
                 refreshTable(my_tree, results)
                 if not results:  # If no results were found
                     messagebox.showwarning("", "No se encontraron registros para la cédula proporcionada.")
                 return
             
-            # If specific fields are filled, construct the query
-            fields = {
-                'cedula': cedula,
-                'contribuyente': contribuyente,
-                'nombreinmueble': nombreinmueble,
-                'rif': rif,
-                'sector': sector,
-                'uso': uso,
-                'codcatastral': codcatastral,
-                'fechaliquidacion': fechaliquidacion
-            }
+            # This section allows flexible, partial searches based 
+            # on any combination of fields the user fills, enabling a custom query without hard-coding each possible combination.
 
-            query_conditions = []
-            query_values = []
+            # # If specific fields are filled, construct the query
+            # fields = {
+            #     'cedula': cedula,
+            #     'contribuyente': contribuyente,
+            #     'nombreinmueble': nombreinmueble,
+            #     'rif': rif,
+            #     'sector': sector,
+            #     'uso': uso,
+            #     'codcatastral': codcatastral,
+            #     'fechaliquidacion': fechaliquidacion
+            # }
 
-            for field, value in fields.items():
-                if value:  # Only include non-empty fields in the query
-                    query_conditions.append(f"{field} LIKE %s")
-                    query_values.append(f'%{value}%')
+            # query_conditions = []
+            # query_values = []
 
-            if query_conditions:  # Only run this if there are conditions
-                query = "SELECT cedula, contribuyente, nombreinmueble, rif, sector, uso, codcatastral, fechaliquidacion FROM reg WHERE " + " AND ".join(query_conditions)
-                cursor.execute(query, query_values)
-                results = cursor.fetchall()
+            # for field, value in fields.items():
+            #     if value:  # Only include non-empty fields in the query
+            #         query_conditions.append(f"{field} LIKE %s")
+            #         query_values.append(f'%{value}%')
+
+            # if query_conditions:  # Only run this if there are conditions
+            #     query = "SELECT cedula, contribuyente, nombreinmueble, rif, sector, uso, codcatastral, fechaliquidacion FROM reg WHERE " + " AND ".join(query_conditions) + " ORDER BY fechaliquidacion DESC"
+            #     cursor.execute(query, query_values)
+            #     results = cursor.fetchall()
                 
-                # Clear the treeview and insert new items
-                refreshTable(my_tree, results)
+            #     # Clear the treeview and insert new items
+            #     refreshTable(my_tree, results)
 
-                if not results:  # If no results were found
-                    messagebox.showwarning("", "No se encontraron registros.")
-            else:
-                # If all fields are empty or no conditions matched
-                messagebox.showwarning("", "Por favor proporciona al menos un criterio de búsqueda.")
+            #     if not results:  # If no results were found
+            #         messagebox.showwarning("", "No se encontraron registros.")
+            # else:
+            #     messagebox.showwarning("", "Por favor proporciona al menos un criterio de búsqueda.")
 
     except Exception as e:
         messagebox.showwarning("", f"An error occurred: {e}")
